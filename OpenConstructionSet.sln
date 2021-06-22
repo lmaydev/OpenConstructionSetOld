@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31410.414
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenConstructionSet", "OpenConstructionSet\OpenConstructionSet.csproj", "{8E0241C5-FA39-4761-8539-5259BB85A739}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenConstructionSet.Example", "OpenConstructionSet.Example\OpenConstructionSet.Example.csproj", "{2F0AFD96-694D-4153-B8F9-0E7BBF77D2CF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8E0241C5-FA39-4761-8539-5259BB85A739}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E0241C5-FA39-4761-8539-5259BB85A739}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E0241C5-FA39-4761-8539-5259BB85A739}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E0241C5-FA39-4761-8539-5259BB85A739}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F0AFD96-694D-4153-B8F9-0E7BBF77D2CF}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{2F0AFD96-694D-4153-B8F9-0E7BBF77D2CF}.Debug|Any CPU.Build.0 = Debug|x86
+		{2F0AFD96-694D-4153-B8F9-0E7BBF77D2CF}.Release|Any CPU.ActiveCfg = Release|x86
+		{2F0AFD96-694D-4153-B8F9-0E7BBF77D2CF}.Release|Any CPU.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EAC88A81-1441-40EA-B00B-12ED2B7A601D}
+	EndGlobalSection
+EndGlobal
