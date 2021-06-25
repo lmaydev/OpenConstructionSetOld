@@ -1,14 +1,16 @@
 # Open Construction Set
-A proof of concept wrapper around Kenshi's FCS to allow loading, editing and saving of Kenshi data and mod files.
+A wrapper SDK for the Forgotten Construction Set.
+Allows creating, loading, querying, editing and saving of mods and game data.
 
 ## Current State
 It is currently possible to:
  - Load mod files and their dependencies
  - Load a mod as active
+ - Query data
  - Edit data
- - Save
+ - Save mods
 
-The example in the repo demonstrates a basic content patcher.
+The [example in the repo](OpenConstructionSet.Example/Program.cs) demonstrates a basic content patcher.
 
 ## Prerequisites
  - Kenshi with FCS
@@ -16,3 +18,5 @@ The example in the repo demonstrates a basic content patcher.
 
 ## Setup
 You must set the KenshiFolder property in the projects.
+
+Any applications must be built for x86.
