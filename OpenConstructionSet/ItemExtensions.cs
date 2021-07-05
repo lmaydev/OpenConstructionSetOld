@@ -79,13 +79,11 @@ namespace OpenConstructionSet
             return new ItemModel
             {
                 Id = item.id,
-                HasInstances = item.HasInstances,
                 Type = item.type,
                 Mod = item.Mod,
                 ModName = item.ModName,
                 Name = item.Name,
                 OriginalName = item.OriginalName,
-                RefCount = item.refCount,
                 StringId = item.stringID,
                 Values = GetValues(),
                 References = GetReferences(),
@@ -111,7 +109,7 @@ namespace OpenConstructionSet
                     values[pair.Key] = pair.Value;
                 }
 
-                return data;
+                return values;
             }
 
             IDictionary<string, IList<ItemReference>> GetReferences()
