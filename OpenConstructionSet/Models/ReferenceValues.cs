@@ -1,43 +1,15 @@
-﻿using forgotten_construction_set;
+﻿namespace OpenConstructionSet.Models;
 
-namespace OpenConstructionSet.Models
+/// <summary>
+/// Represents the values assigned to a <see cref="Reference"/> in the game data files.
+/// </summary>
+/// <param name="Value0">Value 0</param>
+/// <param name="Value1">Value 1</param>
+/// <param name="Value2">Value 2</param>
+public sealed record ReferenceValues(int Value0, int Value1, int Value2)
 {
     /// <summary>
-    /// Representation of the three values associated with a reference.
+    /// A <see cref="Reference"/> with these values is marked as deleted.
     /// </summary>
-    public class ReferenceValues
-    {
-        /// <summary>
-        /// Value 0.
-        /// </summary>
-        public int Value0 { get; set; }
-
-        /// <summary>
-        /// Value 1.
-        /// </summary>
-        public int Value1 { get; set; }
-
-        /// <summary>
-        /// Value 2.
-        /// </summary>
-        public int Value2 { get; set; }
-
-        /// <summary>
-        /// Create an empty object.
-        /// </summary>
-        public ReferenceValues()
-        {
-        }
-
-        /// <summary>
-        /// Retrieve the values from a <c>TripleInt</c> object.
-        /// </summary>
-        /// <param name="value"><c>TripleInt</c> object to take values from.</param>
-        public ReferenceValues(GameData.TripleInt value)
-        {
-            Value0 = value.v0;
-            Value1 = value.v1;
-            Value2 = value.v2;
-        }
-    }
+    public static ReferenceValues Deleted { get; } = new(int.MaxValue, int.MinValue, int.MaxValue);
 }

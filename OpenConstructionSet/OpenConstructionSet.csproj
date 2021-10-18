@@ -1,45 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net48</TargetFramework>
-		<Platforms>x86</Platforms>
-		<Configurations>GogDebug;SteamDebug;GogRelease;SteamRelease</Configurations>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<WarningsAsErrors>nullable</WarningsAsErrors>
+		<Platforms>AnyCPU</Platforms>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<MinimumPlatformVersion>7.0</MinimumPlatformVersion>
+		<DebugType>embedded</DebugType>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<DocumentationFile>$(SolutionDir)/docs/api/OpenConstructionSet.xml</DocumentationFile>
+		<DefaultDocumentationFileNameMode>Md5</DefaultDocumentationFileNameMode>
+		<DefaultDocumentationRemoveFileExtensionFromLinks>true</DefaultDocumentationRemoveFileExtensionFromLinks>
+		<DefaultDocumentationGeneratedPages>Types, Members</DefaultDocumentationGeneratedPages>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<Reference Include="System.Windows.Forms" />
-	</ItemGroup>
-
-
-
-	<PropertyGroup Condition="$(Configuration.StartsWith('Steam'))">
-		<KenshiFolder>C:\Program Files (x86)\Steam\steamapps\common\Kenshi\</KenshiFolder>
-		<GamePlatform>Steam</GamePlatform>
-		<Steam>true</Steam>
-	</PropertyGroup>
-
-	<ItemGroup Condition="$(Configuration.StartsWith('Steam'))">
-		<Reference Include="forgotten construction set">
-			<HintPath>$(KenshiFolder)forgotten construction set.exe</HintPath>
-			<Private>true</Private>
-		</Reference>
-	</ItemGroup>
-
-
-
-	<PropertyGroup Condition="$(Configuration.StartsWith('Gog'))">
-		<KenshiFolder>N:\Games\gog\Kenshi\</KenshiFolder>
-		<GamePlatform>Gog</GamePlatform>
-		<Gog>true</Gog>
-	</PropertyGroup>
-
-	<ItemGroup Condition="$(Configuration.StartsWith('Gog'))">
-		<Reference Include="fcs_gog">
-			<HintPath>$(KenshiFolder)fcs_gog.exe</HintPath>
-			<Private>true</Private>
-		</Reference>
-	</ItemGroup>
-
-
 
 	<!--Nuget package properties-->
 	<PropertyGroup>
@@ -55,7 +28,26 @@
 		<PackageProjectUrl>https://github.com/lmaydev/OpenConstructionSet</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/lmaydev/OpenConstructionSet</RepositoryUrl>
 		<RepositoryType>github</RepositoryType>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<PackageId>OpenConstructionSet.$(GamePlatform)</PackageId>
 	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="Data\**" />
+		<EmbeddedResource Remove="Data\**" />
+		<None Remove="Data\**" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Remove="OcsServiceCollectionExtensions.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Include="Data\IOcsDataContextBuilder.cs" />
+		<Compile Include="Data\OcsDataContext.cs" />
+		<Compile Include="Data\OcsDataContextBuilder.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="DefaultDocumentation" Version="0.7.9">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+	</ItemGroup>
 </Project>
