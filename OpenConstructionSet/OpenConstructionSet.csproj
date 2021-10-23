@@ -4,44 +4,35 @@
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<Platforms>AnyCPU</Platforms>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<MinimumPlatformVersion>7.0</MinimumPlatformVersion>
 		<DebugType>embedded</DebugType>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<Configurations>Debug;Release;Docs</Configurations>
+	</PropertyGroup>
+
+	<PropertyGroup Condition=" '$(Configuration)' == 'Docs' ">
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<DocumentationFile>$(SolutionDir)/docs/api/OpenConstructionSet.xml</DocumentationFile>
 		<DefaultDocumentationFileNameMode>Md5</DefaultDocumentationFileNameMode>
 		<DefaultDocumentationRemoveFileExtensionFromLinks>true</DefaultDocumentationRemoveFileExtensionFromLinks>
 		<DefaultDocumentationGeneratedPages>Types, Members</DefaultDocumentationGeneratedPages>
 	</PropertyGroup>
-
+	
 	<!--Nuget package properties-->
 	<PropertyGroup>
 		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-
 		<Version>0</Version>
 		<Authors>lmaydev</Authors>
 		<Description>
-			A wrapper SDK for the Forgotten Construction Set.
-			Allows creating, loading, querying, editing and saving of mods and game data.
+			The OCS is a modding SDK for Kenshi (https://lofigames.com/) written in C#
+
+			It provides services for dealing with the various folders and data files used by the game.
+			As well as providing a managed context for loading multiple mods for editing (Similar to FCS)
 		</Description>
 		<PackageProjectUrl>https://github.com/lmaydev/OpenConstructionSet</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/lmaydev/OpenConstructionSet</RepositoryUrl>
 		<RepositoryType>github</RepositoryType>
 	</PropertyGroup>
-	<ItemGroup>
-		<Compile Remove="Data\**" />
-		<EmbeddedResource Remove="Data\**" />
-		<None Remove="Data\**" />
-	</ItemGroup>
-	<ItemGroup>
-		<Compile Remove="OcsServiceCollectionExtensions.cs" />
-	</ItemGroup>
-	<ItemGroup>
-		<Compile Include="Data\IOcsDataContextBuilder.cs" />
-		<Compile Include="Data\OcsDataContext.cs" />
-		<Compile Include="Data\OcsDataContextBuilder.cs" />
-	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="DefaultDocumentation" Version="0.7.9">
 			<PrivateAssets>all</PrivateAssets>
@@ -49,5 +40,12 @@
 		</PackageReference>
 		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+	</ItemGroup>
+
+	<ItemGroup Condition=" '$(Configuration)' == 'Docs' ">
+		<PackageReference Include="DefaultDocumentation" Version="0.7.9">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 </Project>
