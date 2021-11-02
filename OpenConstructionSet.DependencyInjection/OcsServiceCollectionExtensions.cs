@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenConstructionSet;
-using OpenConstructionSet.Data;
 using OpenConstructionSet.IO.Discovery;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -16,9 +15,9 @@ public static class OcsServiceCollectionExtensions
                 ServiceDescriptor.Singleton<IInstallationLocator, LocalFolderLocator>(),
             });
 
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IModNameResolver, ModNameResolver>());
-
-        return services.AddSingleton<IOcsService, OcsService>()
+        return services.AddSingleton<IOcsIOService, OcsIOService>()
+                       .AddSingleton<IModNameResolver, ModNameResolver>()
+                       .AddSingleton<IOcsDiscoveryService, OcsDiscoveryService>()
                        .AddSingleton<IOcsDataContextBuilder, OcsDataContextBuilder>();
     }
 }

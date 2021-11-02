@@ -6,14 +6,20 @@ The OCS is a modding SDK for [Kenshi](https://lofigames.com/) written in C#
 It provides services for dealing with the various folders and data files used by the game.
 As well as providing a managed context for loading multiple mods for editing (Similar to FCS)
 
+[Documentation](docs/index.md)
+
+A single cs file example patcher for [SCAR's pathfinding fix](https://www.nexusmods.com/kenshi/mods/602) can be found [here](https://github.com/lmaydev/OpenConstructionSet/blob/main/OpenConstructionSet.Example.Scar.PathFindingFix/Program.cs).
+
 ## Features
 
- - Load, edit and save the game's data files. Currently supports .mod, .info, .base, .save, .zone, .platoon, .level.
- - Read and save the current enabled mods and load order.
- - Locate Steam and Gog installations of the game and it's folders. Including Steam's Workshop content folder and save.
- - Discover the structure of mod and save folders as well as the files contained.
- - Load multiple base and/or active mods into an OcsDataContext for editing. 
- - Save the active mod from an OcsDataContext.
+ - Load, edit and save the game's various data files.
+ - Read and edit the enabled mods (Ticked in the launcher) and the load order.
+ - Locate Steam and Gog installations of the game and their folders. Including Steam's Workshop content folder and the old save folder.
+ - Discover the structure of mod and save folders as well as the files contained within.
+ - Load multiple base and/or active mods into an `OcsDataContext` for editing and saving.
+
+## Thanks
+Massive shout out to [SCARaw](https://www.nexusmods.com/kenshi/users/16691049) for his help throughout the project.
 
 ## Introduction
 ### Project Setup
@@ -26,48 +32,58 @@ Optionally add the dependency injection nuget (https://www.nuget.org/packages/Op
 #### Using Dependency Injection
 Once you have a reference to the dependency injection assembly simple add OCS to your services.
 
+```csharp
     services.UseOpenContructionSet();
+```
 
-This will setup `IOcsService` and `IOcsDataContextBuilder` for injection.
+This will setup `IOcsDiscoverService`, `IOcsIOService` and `IOcsDataContextBuilder` for injection.
 
 #### Using the "Default" system
 While the project is designed to be used with dependency injection there is a secondary system for use if that isn't desirable.
 
 All services provide a static lazy initialized singleton property called Default.
+
 This property when first accessed will in turn access the Default property of it's dependencies to build an instance.
 After this first call all subsequent calls will return the same instance.
 
-    OcsService.Default.FindAllInstallations();
+```csharp
+OcsDiscoverService.Default.FindAllInstallations();
+```
 
 ### Finding Installations and Discovering Game Folders
 
-The `OcsService` provides methods for finding and exploring the game's folder structure.
+The `OcsDiscoverService` provides methods for finding and exploring the game's folder structure.
 
 #### Find the first locatable installation
 By default the order of searching is Steam, Gog and Local.
 
-    Installation? installation = OcsService.Default.FindInstallation();
+```csharp
+Installation? installation = OcsDiscoverService.Default.FindInstallation();
     
-    if (installation is null)
-    {
-        // Game could not be located
-    }
+if (installation is null)
+{
+    // Game could not be located
+}
+```
 
 #### Find a specific installation
-    Installation? steam = OcsService.Default.FindInstallation("Steam");
+```csharp
+Installation? steam = OcsDiscoverService.Default.FindInstallation("Steam");
     
-    if (steam is null)
-    {
-        // Game could not be located
-    }
-    
-#### Find all installlations
+if (steam is null)
+{
+    // Game could not be located
+}
+```   
+#### Find all installations
 
-    Dictionary<string, Installation> installations = OcsService.Default.FindAllInstallations();
-    if (installations.TryGetValue("Gog", out var gog))
-    {
-        // GOG installation located
-    }
+```csharp
+Dictionary<string, Installation> installations = OcsDiscoverService.Default.FindAllInstallations();
+if (installations.TryGetValue("Gog", out var gog))
+{
+    // GOG installation located
+}
+```
 
 #### The Installation object
 
@@ -77,22 +93,20 @@ The `EnabledMods` property contains the enabled mods in load order.
 
 It will contain up to 4 folders depending on which exist.
 
- 1. `Data` - The data folder stores the game's base data files and configuration files.
- 2. `Mods` - The standard mod folder.
- 3. `Content` (Optional) - Currently used for storing the Steam Workshop content folder.
- 4. `Save` (Optional) - This refers to old style save directory located in the game's root folder.
+ - `Data` - The data folder stores the game's base data files and configuration files.
+ - `Mods` - The standard mod folder.
+ - `Content` (Optional) - Currently used for storing the Steam Workshop content folder.
+ - `Save` (Optional) - This refers to old style save directory located in the game's root folder.
 
-The first 3 are represented as `ModFolder` objects.
-These contain information about the mods within the folder. Including header, info and full path.
+The first 3 are represented as `ModFolder` objects. These contain information about the mods within the folder. Including header, info and full path.
 
-The `Save` property is a `SaveFolder` object and contains information about the contained saves and their folder structure.
+The `Save` property is a `SaveFolder` object and represents the old save folder. It contains information about the contained saves and their folder structure.
 
 ### Structure of a Data File.
-LastId - the last number used to generate a StringID for an item e.g. 17-gamedata.quack for Greenlander
-Header - Only included in mod files (Type 16) contains the meta data that is displayed in the launcher.
-Items - collection of data items representing all in game entities. e.g. Building, Stats, Race
-
-When OCS reads data files the Items are returned as a dictionary keyed by their StringID.
+ - Type - Integer indicating the type of the file. Currently 15 (save) and 16 (mod) are supported.
+ - LastId - The last number used to generate a StringID for an item e.g. 17-gamedata.quack for Greenlander.
+ - Header - Only included in mod files (Type 16) contains the meta data that is displayed in the launcher.
+ - Items - Collection of data items representing all in game entities. i.e. Building, Stats, Race etc.
 
 ### The OcsDataContext
 
@@ -104,77 +118,92 @@ It works similar to FCS. You can load any number of base or active mods for edit
 
 To get an `OcsDataContext` instance you must use the `IOcsDataContextBuilder` (or `OcsDataContextBuilder.Default`)
 
-##### The Build method
+##### OcsDataContexOptions
 
-This method takes all the required information and uses it to build a data context.
+This object contains all information required to build an `OcsDataContext`.
+ - Name - (Required) The name of the active mod. If it doesn't exist a new empty mod will be created.
+ - ThrowIfMissing - If `true` missing mod files will generate exceptions. Otherwise they will be ignored.
+ - Installation - An `Installation` object to use when searching for a mods full path and used later by the `OcsDataContext`. If `null` discovery will be attempted.
+ - BaseMods - A collection of mod names, file names or paths to load as base data. The base data will be loaded before applying the active mods on top.
+ - ActiveMods - A collection of mod names, file names or paths to load as active. These mods will be applied on top of the base data and will form part of the changes saved to the new mod.
+ - Header - Contains the meta data shown in the launcher (i.e. author, version, dependencies etc)
+ - Info - Contains additional information about the mod. This takes the form of the .info file that is used for Steam Workshop et al.
+ - LoadGameFiles - If set to `ModLoadType.Active` or `ModLoadType.Base` the game's data files will be loaded into the context as specified. Passing `ModLoadType.None` will cause them not to be loaded.
+ - LoadEnabledMods - As above but it will load the enabled mods in load order.
 
-    OcsDataContext Build(string name, bool throwIfMissing = true, IEnumerable<ModFolder>? folders = null, IEnumerable<string>? baseMods = null, IEnumerable<string>? activeMods = null, Header? header = null, ModInfo? info = null, ModLoadType loadGameFiles = ModLoadType.None)
+##### Using the builder
 
- - name - (Required) The name of the new mod.
- - throwIfMissing - If `true` missing mod files will generate exceptions. Otherwise they will be ignored.
- - folders - A collection of `ModFolder` objects to use when searching for a mods full path. Required if loading the game's data files.
- - basdeMods - A collection of mod names, file names or paths to load as base data. The base data will be loaded before applying the active mods on top.
- - activeMods - A collection of mod names, file names or paths to load as active. These mods will be applied on top of the base data and will form part of the changes saved to the new mod.
- - header - contains the meta data shown in the launcher (i.e. author, version, dependencies etc)
- - info - contains additional information about the mod. This takes the form of the .info file that is used for Steam Workshop et al.
- - loadGameFiles - if set to `ModLoadType.Active` or `ModLoadType.Base` the game's data files will be loaded into the context as specified. Passing `ModLoadType.None` will cause them not to be loaded.
+To build an `OcsDataContext` you must call the `IOcsDataContextBuilder.Build` method with an `OcsDataContextOptions` object.
 
-The following example builds the base data from the game's data files and all enabled mods whilst ignoring missing mods.
+The following example loads the game's base data files and enabled mods as base data with a new mod called example active.
 
-    var installation = OcsService.Default.FindInstallation() ?? throw new Exception("Game not found");
+```csharp
+var installation = OcsDiscoverService.Default.FindInstallation() ?? throw new Exception("Game not found");
     
-    var enabledMods = OcsService.Default.ReadLoadOrder(installation.Data.FullName);
+var options = new OcsDataContexOptions(
+    "example",
+    Installation: installation,
+    LoadGameFiles: ModLoadType.Base,
+    LoadEnabledMods: ModLoadType.Base,
+    Header: new Header(1, "LMayDev", "Description"));
+
+var context = OcsDataContextBuilder.Default.Build(options);
     
-    var context = OcsDataContextBuilder.Default.Build(
-	    "Mod Name",
-	    throwIfMissing: false,
-	    folders: installation.ToModFolderArray(),
-	    baseMods: enabledMods,
-	    activeMods: new[] { "active.mod" },
-	    header: new Header(1, "LMayDev", "Description"),
-	    info: new ModInfo(0, "Name", "Title", OcsConstants.InfoTags[1..2], 0, DateTime.Now),
-	    loadGameFiles: ModLoadType.Base);
+// edit context.Items here
     
-    // edit context.Items here
-    
-    context.Save(installation.Mod);
+// Saves to the installations Mod folder
+context.Save();
+```
 
 ### Loading Files
 
-#### Save Files (Type 15)
-Save files include .save, .zone, .platoon and .level
+#### Data Files
+This includes all type 15 (Save) and 16 (Mod) files.
 
-##### Load
-    var (lastId, items) = new OcsReader(File.ReadAllBytes(@"\path\to\file")).ReadSave();
-##### Save
-    using var stream = File.Create(@"\path\to\file");
-    new OcsWriter(stream).WriteSave(lastId, items.Values);
+```csharp
+if (OcsIOService.Default.TryReadDataFile("path/to/data/file", out var data))
+{
+    data = data with { LastId = data.LastId + 1 };
 
-#### Mod files (Type 16)
-Mod files include .base and .mod
+    OcsIOService.Default.Write("path/to/data/file", data);
+}
+```
 
-##### Load
-    var (lastId, header, items) = new OcsReader(File.ReadAllBytes(@"\path\to\file")).ReadMod();
-##### Save
-    using var stream = File.Create(@"\path\to\file");
-    new OcsWriter(stream).WriteMod(lastId, header, items.Values);
+#### Enabled Mods
+These are the ticked mods from the launcher. They are saved in `[game folder]/data/mods.cfg` file.
+```csharp
+if (OcsIOService.Default.TryReadEnabledMods("path/to/mods.cfg", out var enabledMods))
+{
+    enabledMods.Add("example.mod");
 
-#### Mod .info file
-Many mods come with an additional .info file that contains information used by Steam Workshop and others applications.
+    OcsIOService.Default.Write("path/to/mods.cfg", enabledMods);
+}
+```
 
-##### Load
-    using var stream = File.OpenRead(@"\path\to\info\file");
-    var info = OcsIOHelper.ReadInfo(stream);
+You can also edit them directly on an Installation object and save through the `IOcsIOService`.
 
-##### Save
-    using var stream = File.Create(@"\path\to\info\file");
-    info.WriteInfo(stream);
+```csharp
+installation.EnabledMods.Add("example.mod");
+OcsIOService.Default.SaveEnabledMods(installation);
+```
 
-#### Load Order / Enabled mods
-This refers to the mods that are ticked in the launcher and their order.
-They can be accessed from an `Installation` object or accessed manually as below.
+#### Headers
+Read the header from a Mod (Type 16) file.
+```csharp
+if (!OcsIOService.Default.TryReadHeader("path/to/mod/file", out var header))
+{
+    throw new Exception("File missing or not a valid Mod");
+}
+```
 
-##### Load
-    var enabledMods = OcsService.Default.ReadLoadOrder("path/to/game/data/");
-##### Save
-    OcsService.Default.SaveLoadOrder("path/to/game/data/", enabledMods);
+#### Info Files
+Many mods come with a matching .info file.
+This stores data used by Steam Workshop.
+```csharp
+if (OcsIOService.Default.TryReadInfo("path/to/info/file", out var info))
+{
+    info.LastUpdate = DateTime.Now;
+
+    OcsIOService.Default.Write("path/to/info/file", info);
+}
+```

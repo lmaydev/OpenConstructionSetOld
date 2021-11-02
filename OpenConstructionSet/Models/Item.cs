@@ -74,11 +74,11 @@ public sealed class Item
     };
 
     /// <summary>
-    /// Apply the changes from <c>item</c> to this item.
+    /// Apply the changes from <c>item</c> to this <c>Item</c>.
     /// </summary>
     /// <param name="item">A set of changes to be applied.</param>
     /// <exception cref="InvalidOperationException">Items' types must match</exception>
-    public void Update(Item item)
+    public void ApplyChanges(Item item)
     {
         if (item.Type != Type)
         {
@@ -159,7 +159,7 @@ public sealed class Item
         {
             usedKeys.Add(instance.Id);
 
-            var baseIndex = baseItem.Instances.IndexOfId(instance.Id);
+            var baseIndex = baseItem.Instances.FindIndexById(instance.Id);
 
             if (baseIndex == -1 || baseItem.Instances[baseIndex] != instance)
             {
@@ -194,10 +194,12 @@ public sealed class Item
             if (baseCategory is null)
             {
                 changes.ReferenceCategories.Add(category with { });
+
+                changed = true;
             }
             else
             {
-                var newCategory = new ReferenceCategory(category.Name, new());
+                var changedCategory = new ReferenceCategory(category.Name, new());
 
                 foreach (var reference in category.References)
                 {
@@ -207,7 +209,7 @@ public sealed class Item
 
                     if (baseReference is null || reference != baseReference)
                     {
-                        newCategory.References.Add(reference);
+                        changedCategory.References.Add(reference);
                     }
                 }
 
@@ -218,14 +220,15 @@ public sealed class Item
                         continue;
                     }
 
-                    newCategory.References.Add(baseReference.Delete());
+                    changedCategory.References.Add(baseReference.Delete());
                 }
 
                 usedKeys.Clear();
 
-                if (newCategory.References.Any())
+                if (changedCategory.References.Any())
                 {
-                    changes.ReferenceCategories.Add(newCategory);
+                    changes.ReferenceCategories.Add(changedCategory);
+                    changed = true;
                 }
             }
         }
