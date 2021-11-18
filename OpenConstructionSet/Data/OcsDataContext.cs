@@ -13,7 +13,7 @@ public class OcsDataContext
     /// <summary>
     /// Collection of active items.
     /// </summary>
-    public Dictionary<string, Item> Items { get; }
+    public Dictionary<string, DataItem> Items { get; }
 
     /// <summary>
     /// The name of the mod.
@@ -46,7 +46,7 @@ public class OcsDataContext
     /// <param name="lastId">The last used ID. This should be the largest from all the mods loaded.</param>
     /// <param name="header">An optional header for the active mod.</param>
     /// <param name="info">Optional values the mod's info file.</param>
-    public OcsDataContext(IOcsIOService ioService, Installation installation, Dictionary<string, Item> items, Dictionary<string, Item> baseItems, string modName, int lastId, Header? header = null, ModInfo? info = null)
+    public OcsDataContext(IOcsIOService ioService, Installation installation, Dictionary<string, DataItem> items, Dictionary<string, Item> baseItems, string modName, int lastId, Header? header = null, ModInfo? info = null)
     {
         this.ioService = ioService;
         this.installation = installation;
@@ -65,17 +65,18 @@ public class OcsDataContext
     /// <param name="type">The type of item to create.</param>
     /// <param name="name">The name of the new item.</param>
     /// <returns></returns>
-    public Item NewItem(ItemType type, string name)
+    public DataItem NewItem(ItemType type, string name)
     {
         LastId++;
 
-        var item = new Item(type, 0, name, $"{LastId}-{ModName}", ItemChanges.New);
+        string stringId = $"{LastId}-{ModName}";
 
-        Items.Add(item.StringId, item);
+        var item = new DataItem(stringId, type, 0, name);
+
+        Items[stringId] = item;
 
         return item;
-    }
-
+    } 
     /// <summary>
     /// Saves the active mod to the given path.
     /// </summary>
@@ -93,13 +94,9 @@ public class OcsDataContext
             usedKeys.Add(pair.Key);
             var item = pair.Value;
 
-            if (!baseItems.TryGetValue(item.StringId, out var baseItem))
+            if (!baseItems.TryGetValue(pair.Key, out var baseItem))
             {
-                var newItem = item.Duplicate();
-
-                newItem.Changes = ItemChanges.New;
-
-                changes.Add(newItem);
+                changes.Add(new Item(pair.Key, ItemChanges.New, item));
             }
             else if (item.TryGetChanges(baseItem, out var changeItem))
             {
