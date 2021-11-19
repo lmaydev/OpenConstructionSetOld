@@ -1,135 +1,90 @@
 ﻿namespace OpenConstructionSet.Models;
 
-/// <summary>
-/// Represent an Item from a game data file.
-/// </summary>
-public sealed class Item
+public sealed record Item(ItemType Type, int Id, string Name, string StringId, ItemChanges Changes, Dictionary<string, object> Values, List<ReferenceCategory> ReferenceCategories, List<Instance> Instances)
 {
-    /// <summary>
-    /// The values associated with the Item.
-    /// </summary>
-    public Dictionary<string, object> Values { get; init; } = new();
-
-    /// <summary>
-    /// The references associated with the Item.
-    /// </summary>
-    public ReferenceCategoryCollection ReferenceCategories { get; private set; } = new();
-
-    /// <summary>
-    /// The instances associated with the Item.
-    /// </summary>
-    public InstanceCollection Instances { get; private set; } = new();
-
-    /// <summary>
-    /// The type of the Item.
-    /// </summary>
-    public ItemType Type { get; set; }
-
-    /// <summary>
-    /// The unique id of this Item.
-    /// </summary>
-    public string StringId { get; set; }
-
-    /// <summary>
-    /// Still not sure what this does.
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
-    /// The name of this Item.
-    /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Represents the state of changes to this item.
-    /// </summary>
-    public ItemChanges Changes { get; set; }
-
-    /// <summary>
-    /// Initializes a new <c>Item</c>.
-    /// </summary>
-    /// <param name="type">Item type.</param>
-    /// <param name="id">Not sure, seems to be 0 for mod files.</param>
-    /// <param name="name">Item's name.</param>
-    /// <param name="stringId">Item's unique identifier</param>
-    /// <param name="changes">The state of changes to this item.</param>
-    public Item(ItemType type, int id, string name, string stringId, ItemChanges changes)
+    public Item(ItemType Type, int Id, string Name, string StringId, ItemChanges Changes) : this(Type, Id, Name, StringId, Changes, new(), new(), new())
     {
-        Type = type;
-        Id = id;
-        Name = name;
-        StringId = stringId;
-        Changes = changes;
     }
 
-    /// <summary>
-    /// Duplicate's the current Item.
-    /// </summary>
-    /// <returns>A duplicate of the current Item.</returns>
-    public Item Duplicate() => new(Type, Id, Name, StringId, Changes)
+    public Item(Item item)
     {
-        Values = new(Values),
-        ReferenceCategories = new(ReferenceCategories.Select(c => new ReferenceCategory(c))),
-        Instances = new(Instances)
-    };
+        Type = item.Type;
+        Id = item.Id;
+        Name = item.Name;
+        StringId = item.StringId;
+        Changes = item.Changes;
+
+        Values = new(item.Values);
+        ReferenceCategories = new(item.ReferenceCategories);
+        Instances = new(item.Instances);
+    }
+
+    public Item(string stringId, ItemChanges changes, DataItem data) : this(data.Type, data.Id, data.Name, stringId, changes)
+    {
+    }
 
     /// <summary>
     /// Apply the changes from <c>item</c> to this <c>Item</c>.
     /// </summary>
-    /// <param name="item">A set of changes to be applied.</param>
+    /// <param name="changes">A set of changes to be applied.</param>
     /// <exception cref="InvalidOperationException">Items' types must match</exception>
-    public void ApplyChanges(Item item)
+    public Item ApplyChanges(Item changes)
     {
-        if (item.Type != Type)
+        if (changes.Type != Type)
         {
             throw new InvalidOperationException("Items' types must match");
         }
 
-        Id = item.Id;
-        Name = item.Name;
-        Changes = item.Changes;
+        var item = this with { Id = changes.Id, Name = changes.Name, Changes = changes.Changes };
 
-        foreach (var pair in item.Values)
+        foreach (var pair in changes.Values)
         {
-            Values[pair.Key] = pair.Value;
+            item.Values[pair.Key] = pair.Value;
         }
 
-        foreach (var instance in item.Instances)
+        foreach (var instance in changes.Instances)
         {
-            if (Instances.Contains(instance))
+            var index = item.Instances.FindIndex(i => i.Id == instance.Id);
+
+            if (index > -1)
             {
-                Instances.Remove(instance);
+                item.Instances.RemoveAt(index);
             }
 
             if (!instance.IsDeleted())
             {
-                Instances.Add(instance);
+                item.Instances.Add(instance);
             }
         }
 
-        foreach (var category in item.ReferenceCategories)
+        foreach (var category in changes.ReferenceCategories)
         {
-            var baseCategory = ReferenceCategories.FindById(category.Name);
+            var existing = item.ReferenceCategories.Find(c => c.Name == category.Name);
 
-            if (baseCategory is null)
+            if (existing is null)
             {
-                ReferenceCategories.Add(category with { });
+                item.ReferenceCategories.Add(new(category));
             }
             else
             {
                 foreach (var reference in category.References)
                 {
-                    if (reference.IsDeleted())
+                    var index = existing.References.FindIndex(r => r.TargetId == reference.TargetId);
+
+                    if (index > -1)
                     {
-                        baseCategory.References.RemoveById(reference.TargetId);
+                        existing.References.RemoveAt(index);
                     }
-                    else
+
+                    if (!reference.IsDeleted())
                     {
-                        baseCategory.References.Add(reference);
+                        existing.References.Add(reference);
                     }
                 }
             }
         }
+
+        return item;
     }
 
     /// <summary>
@@ -137,14 +92,14 @@ public sealed class Item
     /// </summary>
     /// <param name="baseItem">Base item to compare to.</param>
     /// <param name="changes">If successful will contain the changes.</param>
-    /// <returns><c>true</c> if successful; otherwise, <c>false</c></returns>
-    public bool TryGetChanges(Item baseItem, out Item changes)
+    /// <returns><c>true</c> if there are changes; otherwise, <c>false</c></returns>
+    public static bool TryGetChanges(Item item, Item baseItem, out Item changes)
     {
-        var changed = Name != baseItem.Name;
+        var changed = item.Name != baseItem.Name;
 
-        changes = new Item(Type, Id, Name, StringId, changed ? ItemChanges.Renamed : ItemChanges.Changed);
+        changes = new Item(item.Type, item.Id, item.Name, item.StringId, item.Name != baseItem.Name ? ItemChanges.Renamed : ItemChanges.Changed);
 
-        foreach (var pair in Values)
+        foreach (var pair in item.Values)
         {
             if (!baseItem.Values.TryGetValue(pair.Key, out var value) || value != pair.Value)
             {
@@ -155,11 +110,11 @@ public sealed class Item
 
         var usedKeys = new HashSet<string>();
 
-        foreach (var instance in Instances)
+        foreach (var instance in item.Instances)
         {
             usedKeys.Add(instance.Id);
 
-            var baseIndex = baseItem.Instances.FindIndexById(instance.Id);
+            var baseIndex = baseItem.Instances.FindIndex(i => i.Id == instance.Id);
 
             if (baseIndex == -1 || baseItem.Instances[baseIndex] != instance)
             {
@@ -185,11 +140,11 @@ public sealed class Item
 
         var usedCategories = new HashSet<string>();
 
-        foreach (var category in ReferenceCategories)
+        foreach (var category in item.ReferenceCategories)
         {
             usedCategories.Add(category.Name);
 
-            var baseCategory = baseItem.ReferenceCategories.FindById(category.Name);
+            var baseCategory = baseItem.ReferenceCategories.Find(c => c.Name == category.Name);
 
             if (baseCategory is null)
             {
@@ -199,15 +154,15 @@ public sealed class Item
             }
             else
             {
-                var changedCategory = new ReferenceCategory(category.Name, new());
+                var changedCategory = new ReferenceCategory(category.Name, new List<Reference>());
 
                 foreach (var reference in category.References)
                 {
                     usedKeys.Add(reference.TargetId);
 
-                    var baseReference = baseCategory.References.FindById(reference.TargetId);
+                    var baseIndex = baseCategory.References.FindIndex(r => r.TargetId == reference.TargetId);
 
-                    if (baseReference is null || reference != baseReference)
+                    if (baseIndex == -1 || reference != baseCategory.References[baseIndex])
                     {
                         changedCategory.References.Add(reference);
                     }
@@ -240,7 +195,7 @@ public sealed class Item
                 continue;
             }
 
-            changes.ReferenceCategories.Add(new(baseCategory.Name, new(baseCategory.References.Select(r => r.Delete()))));
+            changes.ReferenceCategories.Add(new(baseCategory.Name, new List<Reference>(baseCategory.References.Select(r => r.Delete()))));
         }
 
         return changed;

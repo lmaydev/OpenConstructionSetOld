@@ -2,8 +2,10 @@
 
 namespace OpenConstructionSet;
 
-/// <inheritdoc/>
-public class OcsDataContextBuilder : IOcsDataContextBuilder
+/// <summary>
+/// Used to build game data and <see cref="OcsDataContext"/>s.
+/// </summary>
+public class OcsDataContextBuilder : IOcsDataContextBuilder, IOcsDataBuilder
 {
     private static readonly Lazy<OcsDataContextBuilder> _default = new(() => new(OcsDiscoveryService.Default, OcsIOService.Default, ModNameResolver.Default));
 
@@ -32,124 +34,153 @@ public class OcsDataContextBuilder : IOcsDataContextBuilder
     /// <inheritdoc />
     public OcsDataContext Build(OcsDataContexOptions options)
     {
-        // if installation is null try and discover one. If this fails throw an exception
-        var installation = options.Installation ?? discoveryService.DiscoverInstallation() ?? throw new Exception("Could not locate game");
-
-        var baseMods = options.BaseMods is not null ? Resolve(options.BaseMods) : Enumerable.Empty<ModFile>();
-        var activeMods = options.ActiveMods is not null ? Resolve(options.ActiveMods) : Enumerable.Empty<ModFile>();
+        Installation installation = options switch
+        {
+            OcsDataContexOptions { Installation: not null } o => o.Installation,
+            OcsDataContexOptions { InstallationName: not null } o => discoveryService.DiscoverInstallation(o.InstallationName) ?? throw new Exception($"Could not find installation ({o.InstallationName})"),
+            _ => discoveryService.DiscoverInstallation() ?? throw new Exception("Could not find any installations"),
+        };
 
         var baseItems = new Dictionary<string, Item>();
-        var items = new Dictionary<string, Item>();
 
         var lastId = 0;
-
-        var header = options.Header;
-        var info = options.Info;
 
         ModFile? last = null;
 
         var activeMod = resolver.Resolve(installation.ToModFolderArray(), options.Name);
 
-        if (options.LoadGameFiles == ModLoadType.Base)
-        {
-            LoadGameFiles(false);
-        }
+        ReadBaseMods();
 
-        if (options.LoadEnabledMods == ModLoadType.Base)
-        {
-            LoadEnabledMods(false);
-        }
+        var items = baseItems.Values.ToDictionary(i => i.StringId, i => new DataItem(i));
 
-        baseMods.ForEach(m => ReadFile(m, false));
+        ReadActiveMods();
 
-        items = baseItems.Values.ToDictionary(i => i.StringId, i => i.Duplicate());
-
-        if (options.LoadGameFiles == ModLoadType.Active)
-        {
-            LoadGameFiles(true);
-        }
-
-        if (options.LoadEnabledMods == ModLoadType.Active)
-        {
-            LoadEnabledMods(true);
-        }
-
-        activeMods.ForEach(m => ReadFile(m, true));
-
-        if (activeMod is not null)
-        {
-            ReadFile(activeMod, true);
-        }
-
-        if (last is not null)
-        {
-            if (header is null)
-            {
-                header = last.Header;
-            }
-
-            if (info is null)
-            {
-                info = last.Info;
-            }
-        }
+        var header = options.Header ?? last?.Header;
+        var info = options.Info ?? last?.Info;
 
         return new OcsDataContext(ioService, installation, items, baseItems, options.Name, lastId, header, info);
 
-        void ReadFile(ModFile file, bool active)
+        void ReadBaseMods()
         {
-            using var reader = new OcsReader(File.OpenRead(file.FullName));
+            var mods = new List<string>();
 
-            var type = (DataFileType)reader.ReadInt();
-
-            if (type == DataFileType.Mod)
+            if (options.LoadGameFiles == ModLoadType.Base)
             {
-                reader.ReadHeader();
+                mods.AddRange(OcsConstants.BaseMods);
             }
 
-            lastId = Math.Max(lastId, reader.ReadInt());
-
-            reader.ReadItems().ForEach(i => AddOrUpdate(i, active));
-
-            if (active)
+            if (options.LoadEnabledMods == ModLoadType.Base)
             {
-                last = file;
+                mods.AddRange(installation.EnabledMods);
             }
+
+            if (options.BaseMods is not null)
+            {
+                mods.AddRange(options.BaseMods);
+            }
+
+            var modFiles = Resolve(mods, installation, options.ThrowIfMissing);
+
+            ReadMods(modFiles, baseItems.AddOrUpdate, ref lastId, out _);
         }
 
-        void AddOrUpdate(Item data, bool active)
+        void ReadActiveMods()
         {
-            var dictionary = active ? items : baseItems;
+            var mods = new List<string>();
 
-            if (data.IsDeleted())
+            if (options.LoadGameFiles == ModLoadType.Active)
             {
-                dictionary.Remove(data.StringId);
-                return;
+                mods.AddRange(OcsConstants.BaseMods);
             }
 
-            if (dictionary.TryGetValue(data.StringId, out var item))
+            if (options.LoadEnabledMods == ModLoadType.Active)
             {
-                item.ApplyChanges(data);
+                mods.AddRange(installation.EnabledMods);
             }
-            else
+
+            if (options.ActiveMods is not null)
             {
-                dictionary[data.StringId] = data;
+                mods.AddRange(options.ActiveMods);
             }
-        }
 
-        void LoadGameFiles(bool active)
-        {
-            Resolve(OcsConstants.BaseMods).ForEach(m => ReadFile(m, active));
-        }
+            var modFiles = Resolve(mods, installation, options.ThrowIfMissing);
 
-        void LoadEnabledMods(bool active)
-        {
-            var mods = Resolve(installation.EnabledMods);
-        }
+            ReadMods(modFiles, items.AddOrUpdate, ref lastId, out last);
 
-        IEnumerable<ModFile> Resolve(IEnumerable<string> mods)
-        {
-            return resolver.Resolve(installation.ToModFolderArray(), mods, options.ThrowIfMissing).DistinctBy(m => m.Name);
+            if (activeMod is not null)
+            {
+                lastId = Math.Max(lastId, ReadFile(activeMod, items.AddOrUpdate));
+            }
         }
     }
+
+    /// <inheritdoc />
+    public DataFile Build(OcsDataOptions options)
+    {
+        var installation = options switch
+        {
+            OcsDataOptions { Installation: not null } o => o.Installation,
+            OcsDataOptions { InstallationName: not null } o => discoveryService.DiscoverInstallation(o.InstallationName) ?? throw new Exception($"Could not find installation ({o.InstallationName})"),
+            _ => discoveryService.DiscoverInstallation() ?? throw new Exception("Could not find any installations"),
+        };
+
+        var items = new Dictionary<string, Item>();
+
+        var lastId = 0;
+
+        var mods = new List<string>();
+
+        if (options.LoadGameFiles)
+        {
+            mods.AddRange(OcsConstants.BaseMods);
+        }
+
+        if (options.LoadEnabledMods)
+        {
+            mods.AddRange(installation.EnabledMods);
+        }
+
+        if (options.Mods is not null)
+        {
+            mods.AddRange(options.Mods);
+        }
+
+        var modFiles = Resolve(mods, installation, options.ThrowIfMissing);
+
+        ReadMods(modFiles, items.AddOrUpdate, ref lastId, out var last);
+
+        return new(DataFileType.Mod, last?.Header, lastId, items.Values.ToList());
+    }
+
+    private static void ReadMods(IEnumerable<ModFile> mods, Action<Item> AddOrUpdate, ref int lastId, out ModFile? last)
+    {
+        last = null;
+
+        foreach (var mod in mods)
+        {
+            lastId = Math.Max(lastId, ReadFile(mod, AddOrUpdate));
+
+            last = mod;
+        }
+    }
+
+    private static int ReadFile(ModFile file, Action<Item> AddOrUpdate)
+    {
+        using var reader = new OcsReader(File.OpenRead(file.FullName));
+
+        var type = (DataFileType)reader.ReadInt();
+
+        if (type == DataFileType.Mod)
+        {
+            reader.ReadHeader();
+        }
+
+        var lastId = reader.ReadInt();
+
+        reader.ReadItems().ForEach(AddOrUpdate);
+
+        return lastId;
+    }
+
+    private IEnumerable<ModFile> Resolve(IEnumerable<string> mods, Installation installation, bool throwIfMissing) => resolver.Resolve(installation.ToModFolderArray(), mods, throwIfMissing).DistinctBy(m => m.Name);
 }

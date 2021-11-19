@@ -12,17 +12,21 @@ public static class ModelExtensions
     /// </summary>
     /// <param name="item">The item to mark as deleted.</param>
     /// <returns>A copy of the item marked as deleted.</returns>
-    public static Item Delete(this Item item) => new(item.Type, item.Id, item.Name, item.StringId, ItemChanges.Changed)
+    public static Item Delete(this Item item)
     {
-        Values = new Dictionary<string, object> { ["DELETED"] = true }
-    };
+        var deleted = new Item(item.Type, item.Id, item.Name, item.StringId, ItemChanges.Changed);
+
+        deleted.Values["DELETED"] = true;
+
+        return deleted;
+    }
 
     /// <summary>
     /// Return a copy of <c>reference</c> marked as deleted.
     /// </summary>
     /// <param name="reference">The reference to mark as deleted.</param>
     /// <returns>A copy of the reference marked as deleted.</returns>
-    public static Reference Delete(this Reference reference) => reference with { Values = ReferenceValues.Deleted };
+    public static Reference Delete(this Reference reference) => reference with { Value0 = int.MaxValue, Value1 = int.MaxValue, Value2 = int.MaxValue };
 
     /// <summary>
     /// Return a copy of <c>instance</c> marked as deleted.
@@ -45,7 +49,7 @@ public static class ModelExtensions
     /// </summary>
     /// <param name="reference">The reference to check.</param>
     /// <returns><c>true</c> if <c>reference</c> is marked as deleted.</returns>
-    public static bool IsDeleted(this Reference reference) => reference.Values.Equals(ReferenceValues.Deleted);
+    public static bool IsDeleted(this Reference reference) => reference is Reference { Value0: int.MaxValue, Value1: int.MaxValue, Value2: int.MaxValue };
 
     /// <summary>
     /// Determines if <c>instance</c> is marked as deleted.
@@ -53,4 +57,34 @@ public static class ModelExtensions
     /// <param name="instance">The instance to check.</param>
     /// <returns><c>true</c> if <c>instance</c> is marked as deleted.</returns>
     public static bool IsDeleted(this Instance instance) => string.IsNullOrEmpty(instance.Target);
+
+    /// <summary>
+    /// If <c>item</c>'s <c>StringId</c> does not exists in <c>items</c> it is added. Otherwise the existing item is updated with the data from <c>item</c>
+    /// </summary>
+    /// <param name="items">The collection of items to work against.</param>
+    /// <param name="item">The item to add or use to update the existing item.</param>
+    public static void AddOrUpdate(this Dictionary<string, Item> items, Item item)
+    {
+        if (item.IsDeleted())
+        {
+            items.Remove(item.StringId);
+            return;
+        }
+
+        items[item.StringId] = items.TryGetValue(item.StringId, out var existingItem) ? existingItem.ApplyChanges(item) : item;
+    }
+
+    public static void AddOrUpdate(this Dictionary<string, DataItem> items, Item item)
+    {
+        if (item.IsDeleted())
+        {
+            items.Remove(item.StringId);
+            return;
+        }
+
+        if (items.TryGetValue(item.StringId, out var existingItem))
+            existingItem.ApplyChanges(item);
+        else
+            items.Add(item.StringId, new(item));
+    }
 }
