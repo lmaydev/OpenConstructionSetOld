@@ -6,7 +6,7 @@
 		<IsPackable>false</IsPackable>
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
-		<Platforms>x64</Platforms>
+		<Platforms>AnyCPU</Platforms>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Configurations>Debug;Release</Configurations>
 		<AssemblyName>OCSP.Console.Scar.PathFindingFix</AssemblyName>
@@ -20,6 +20,10 @@
 		<TrimMode>link</TrimMode>
 		<SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+	</ItemGroup>
 	
 	<ItemGroup>
 	  <ProjectReference Include="..\OpenConstructionSet\OpenConstructionSet.csproj" />

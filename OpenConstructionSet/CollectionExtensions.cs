@@ -1,4 +1,4 @@
-namespace OpenConstructionSet;
+﻿namespace OpenConstructionSet;
 
 /// <summary>
 /// A collection of extensions for collections.
@@ -6,36 +6,23 @@ namespace OpenConstructionSet;
 public static class CollectionExtensions
 {
     /// <summary>
-    /// Returns all <see cref="Item"/>s of the given <see cref="ItemType"/> from the collection.
+    /// Filters a collection of <see cref="IItem"/>s by their type.
     /// </summary>
-    /// <param name="collection">A collection of items to filter.</param>
-    /// <param name="type">The type of item to return.</param>
-    /// <returns>All items from the collection with the given type.</returns>
-    public static IEnumerable<Item> OfType(this IEnumerable<Item> collection, ItemType type) => collection.Where(i => i.Type == type);
+    /// <typeparam name="TItem">The concreate type of the <see cref="IItem"/>s in the collection.</typeparam>
+    /// <param name="collection">The collection to filter.</param>
+    /// <param name="itemType">The type to filter by.</param>
+    /// <returns>All <see cref="IItem"/>s in <c>collection</c> of the matching <see cref="ItemType"/>.</returns>
+    public static IEnumerable<TItem> OfType<TItem>(this IEnumerable<TItem> collection, ItemType itemType)
+        where TItem : IItem
+        => collection.Where(i => i.Type == itemType);
 
-    /// <summary>
-    /// Returns all <see cref="Item"/>s of the given <see cref="ItemType"/> from the collection.
-    /// </summary>
-    /// <param name="dictionary">A dictionary of items to filter.</param>
-    /// <param name="type">The type of item to return.</param>
-    /// <returns>All items from the collection with the given type.</returns>
-    public static IEnumerable<Item> OfType(this IDictionary<string, Item> dictionary, ItemType type) => dictionary.Values.OfType(type);
-
-    /// <summary>
-    /// Returns all <see cref="DataItem"/>s of the given <see cref="ItemType"/> from the collection.
-    /// </summary>
-    /// <param name="collection">A collection of items to filter.</param>
-    /// <param name="type">The type of item to return.</param>
-    /// <returns>All items from the collection with the given type.</returns>
-    public static IEnumerable<DataItem> OfType(this IEnumerable<DataItem> collection, ItemType type) => collection.Where(i => i.Type == type);
-
-    /// <summary>
-    /// Returns all <see cref="Item"/>s of the given <see cref="ItemType"/> from the collection.
-    /// </summary>
-    /// <param name="dictionary">A dictionary of items to filter.</param>
-    /// <param name="type">The type of item to return.</param>
-    /// <returns>All items from the collection with the given type.</returns>
-    public static IEnumerable<KeyValuePair<string, DataItem>> OfType(this IDictionary<string, DataItem> dictionary, ItemType type) => dictionary.Where(p => p.Value.Type == type);
+    internal static void AddRange<T>(this ICollection<T> collection, IEnumerable<T> items)
+    {
+        foreach (var item in items)
+        {
+            collection.Add(item);
+        }
+    }
 
     internal static void ForEach<T>(this IEnumerable<T> collection, Action<T> action)
     {

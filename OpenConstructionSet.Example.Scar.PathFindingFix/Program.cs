@@ -1,123 +1,38 @@
 using OpenConstructionSet.Data;
+using OpenConstructionSet.Installations;
+using OpenConstructionSet.Mods;
+using OpenConstructionSet.Mods.Context;
 
 const string ModName = "OCSP SCAR's pathfinding fix";
 const string ModFileName = ModName + ".mod";
 const string ReferenceModName = "SCAR's pathfinding fix.mod";
 
-Console.WriteLine("OpenConstructionSet Patcher");
+Console.WriteLine("OpenConstructionSet Patcher Example");
 Console.WriteLine("SCAR's pathfinding fix https://www.nexusmods.com/kenshi/mods/602");
 Console.WriteLine();
 
-var installations = OcsDiscoveryService.Default.DiscoverAllInstallations();
-
-if (installations.Count == 0)
-{
-    Console.WriteLine("Unable to find game");
-    Console.ReadKey();
-    return;
-}
-
-Installation installation;
-
-if (installations.Count == 1)
-{
-    // One installation so use it
-    installation = installations.Values.First();
-}
-else
-{
-    // Display the installations to the user
-    var keys = installations.Keys.ToList();
-
-    Console.WriteLine("Multiple installations found");
-
-    for (var i = 0; i < keys.Count; i++)
-    {
-        Console.WriteLine($"{i + 1} - {keys[i]}");
-    }
-
-    Console.Write("Please select which to use: ");
-
-    // Get the user to chose
-    var selection = keys[int.Parse(Console.ReadLine() ?? "1") - 1];
-
-    installation = installations[selection];
-
-    Console.WriteLine($"Using the {selection} installation");
-}
+var installation = await SelectInstallation();
 
 Console.WriteLine();
 
 Console.Write("Reading load order... ");
 
-var baseMods = new List<string>(installation.EnabledMods);
-
-// Don't patch ourselves or SCAR's mod
-baseMods.Remove(ModFileName);
-baseMods.Remove(ReferenceModName);
-
-if (!baseMods.Any())
-{
-    // No mods found to patch
-    Console.WriteLine("failed!");
-    Console.WriteLine("No mods found to patch");
-    Console.ReadKey();
-    return;
-}
+var baseMods = await ModsToPatch();
 
 Console.WriteLine("done");
-Console.WriteLine();
-
-// Find SCAR's mod
-var referenceMod = ModNameResolver.Default.Resolve(installation.ToModFolderArray(), ReferenceModName);
-
-if (referenceMod is null)
-{
-    // Not found
-    Console.WriteLine($"Unable to find {ReferenceModName}");
-    Console.ReadKey();
-    return;
-}
 
 Console.Write("Loading data... ");
 
-// Read SCAR's mod
-if (!OcsIOService.Default.TryReadDataFile(referenceMod.FullName, out var referenceData))
-{
-    // Not found
-    Console.WriteLine($"Unable to load {ReferenceModName}");
-    Console.ReadKey();
-    return;
-}
+var (waterAvoidance, pathfindAcceleration, version) = await ReadScarsMod();
 
-// Extract core values from the Greenlander race item
-var greenlander = referenceData.Items.Find(i => i.StringId == "17-gamedata.quack")!;
-var pathfindAcceleration = greenlander.Values["pathfind acceleration"];
-var waterAvoidance = greenlander.Values["water avoidance"];
-
-// Build mod
-var header = new Header(referenceData.Header?.Version ?? 1,
-                        "LMayDev",
-                        "OpenConstructionSet Compatibility patch to apply core values from SCAR's pathfinding fix to custom races");
-header.References.Add(ReferenceModName);
-header.Dependencies.AddRange(baseMods);
-
-var options = new OcsDataContexOptions(ModFileName,
-    Installation: installation,
-    BaseMods: baseMods,
-    Header: header,
-    LoadGameFiles: ModLoadType.Base,
-    ThrowIfMissing: false);
-
-var context = OcsDataContextBuilder.Default.Build(options);
+var context = await BuildModContext();
 
 Console.WriteLine("done");
-Console.WriteLine();
 
 // Get all races where editor limits are set i.e. it is not an animal race
-var races = context.Items.Values.OfType(ItemType.Race).Where(race => race.Values.TryGetValue("editor limits", out var value)
-                                                                     && value is FileValue file
-                                                                     && !string.IsNullOrEmpty(file.Path));
+var races = context.Items.OfType(ItemType.Race).Where(race => race.Values.TryGetValue("editor limits", out var value)
+                                                              && value is FileValue file
+                                                              && !string.IsNullOrEmpty(file.Path));
 
 foreach (var race in races)
 {
@@ -131,21 +46,138 @@ foreach (var race in races)
     }
 }
 
-Console.WriteLine();
 Console.Write("Saving... ");
 
-context.Save();
+await context.SaveAsync();
 
 Console.WriteLine("done");
-Console.WriteLine();
 
-// Remove this mod and then add to the end of the load order.
-installation.EnabledMods.RemoveAll(s => s == ModFileName);
-installation.EnabledMods.Add(ModFileName);
+Console.Write("Adding patch to end of load order... ");
 
-OcsIOService.Default.SaveEnabledMods(installation);
+var enabledMods = (await installation.ReadEnabledModsAsync()).ToList();
 
-Console.WriteLine("Added patch to end of load order");
+// Remove this mod and then add to the end of the load order
+enabledMods.RemoveAll(s => s == ModFileName);
+enabledMods.Add(ModFileName);
 
-Console.Write("Press any key to exit...");
-Console.ReadKey();
+await installation.WriteEnabledModsAsync(enabledMods);
+
+Console.Write("done");
+
+async Task<IInstallation> SelectInstallation()
+{
+    var installations = await new InstallationService().DiscoverAllInstallationsAsync().ToDictionaryAsync(i => i.Identifier);
+
+    if (installations.Count == 0)
+    {
+        Error("Unable to find game");
+
+#pragma warning disable CS8603 // Possible null reference return.
+        return null;
+#pragma warning restore CS8603 // Possible null reference return.
+    }
+    else if (installations.Count == 1)
+    {
+        // One installation so use it
+        return installations.Values.First();
+    }
+    else
+    {
+        // Display the installations to the user
+        var keys = installations.Keys.ToList();
+
+        Console.WriteLine("Multiple installations found");
+
+        for (var i = 0; i < keys.Count; i++)
+        {
+            Console.WriteLine($"{i + 1} - {keys[i]}");
+        }
+
+        Console.Write("Please select which to use: ");
+
+        // Get the user to chose
+        var selection = keys[int.Parse(Console.ReadLine() ?? "1") - 1];
+
+        Console.WriteLine($"Using the {selection} installation");
+
+        return installations[selection];
+    }
+}
+
+void Error(string message)
+{
+    Console.WriteLine(message);
+    Environment.Exit(1);
+}
+
+async Task<(float waterAvoidance, float pathFindAcceleration, int version)> ReadScarsMod()
+{
+    if (!installation.Mods.TryFind(ReferenceModName, out var referenceMod))
+    {
+        // Not found
+        Error($"Unable to find {ReferenceModName}");
+        return (0, 0, 0);
+    }
+
+    ModFileData referenceData;
+
+    try
+    {
+        referenceData = await referenceMod.ReadDataAsync();
+    }
+    catch (Exception ex)
+    {
+        Error($"Unable to load {ReferenceModName}{Environment.NewLine}Error: {ex}");
+        return (0, 0, 0);
+    }
+
+    // Extract core values from the Greenlander race item
+    var greenlander = referenceData.Items.Find(i => i.Name == "Greenlander");
+
+    if (greenlander is null)
+    {
+        Error("Could not find Greenlander");
+        return (0, 0, 0);
+    }
+
+    var pathfindAcceleration = greenlander.Values["pathfind acceleration"];
+    var waterAvoidance = greenlander.Values["water avoidance"];
+
+    return ((float)waterAvoidance, (float)pathfindAcceleration, referenceData.Header.Version);
+}
+
+async Task<IModContext> BuildModContext()
+{
+    // Build mod
+    var header = new Header(version,
+                            "LMayDev",
+                            "OpenConstructionSet Compatibility patch to apply core values from SCAR's pathfinding fix to custom races");
+    header.References.Add(ReferenceModName);
+    header.Dependencies.AddRange(baseMods);
+
+    var options = new ModContextOptions(ModFileName,
+        installation: installation,
+        baseMods: baseMods,
+        header: header,
+        throwIfMissing: false);
+
+    return await new ContextBuilder().BuildAsync(options);
+}
+
+async Task<List<string>> ModsToPatch()
+{
+    var mods = new List<string>(await installation.ReadEnabledModsAsync());
+
+    // Don't patch ourselves or SCAR's mod
+    mods.Remove(ModFileName);
+    mods.Remove(ReferenceModName);
+
+    if (mods.Count == 0)
+    {
+        // No mods found to patch
+        Error($"failed!{Environment.NewLine}No mods found to patch");
+        return new();
+    }
+
+    return mods;
+}
