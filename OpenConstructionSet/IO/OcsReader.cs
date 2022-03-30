@@ -45,11 +45,20 @@ public sealed class OcsReader : IDisposable
     /// Read a <see cref="Header"/> object from the data.
     /// </summary>
     /// <returns>A <see cref="Header"/> object read from the data.</returns>
-    public Header ReadHeader() => new(ReadInt(), ReadString(), ReadString())
+    public Header ReadHeader(int type)
     {
-        Dependencies = ReadStringList().ToList(),
-        References = ReadStringList().ToList()
-    };
+        Header h = new();
+        var endPosition = type == 17 ? ReadInt()/*header length*/ + reader.BaseStream.Position : 0;
+        h.Version = ReadInt();
+        h.Author = ReadString();
+        h.Description = ReadString();
+        h.Dependencies = ReadStringList().ToList();
+        h.References = ReadStringList().ToList();
+
+        if (type == 17) reader.ReadBytes((int)(endPosition - reader.BaseStream.Position));
+
+        return h;
+    }
 
     /// <summary>
     /// Read an <see cref="Instance"/> from the data.

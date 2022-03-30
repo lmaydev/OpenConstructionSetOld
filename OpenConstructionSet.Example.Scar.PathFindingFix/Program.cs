@@ -40,7 +40,7 @@ foreach (var race in races)
     race.Values["pathfind acceleration"] = pathfindAcceleration;
 
     // avoid changing for races that like water
-    if ((float)race.Values["water avoidance"] > 0)
+    if (race.Values.ContainsKey("water avoidance") && (float)race.Values["water avoidance"] > 0)
     {
         race.Values["water avoidance"] = waterAvoidance;
     }

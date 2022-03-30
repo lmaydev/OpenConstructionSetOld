@@ -21,6 +21,21 @@ public class DataFileData
     }
 
     /// <summary>
+    /// Creates a new <see cref="DataFileData"/>.
+    /// </summary>
+    /// <param name="type">The data file's type integer.</param>
+    /// <param name="header">The mod's header.</param>
+    /// <param name="lastId">The last ID number used when creating new items.</param>
+    /// <param name="items">The collection of <see cref="Item"/>s of the <see cref="IDataFile"/>.</param>
+    public DataFileData(int type, Header? header, int lastId, IEnumerable<Item> items)
+    {
+        Type = (DataFileType)type;
+        LastId = lastId;
+        Items = new(items);
+        Header = header;
+    }
+
+    /// <summary>
     /// The <see cref="Header"/> if it is a <see cref="DataFileType.Mod"/> file.
     /// <c>null</c> for other data files
     /// </summary>

@@ -30,8 +30,8 @@ public class DataFile : IDataFile
 
         using var reader = new OcsReader(buffer);
 
-        var type = (DataFileType)reader.ReadInt();
-        var header = type == DataFileType.Mod ? reader.ReadHeader() : null;
+        var type = reader.ReadInt();
+        var header = type >= (int)DataFileType.Mod ? reader.ReadHeader(type) : null;
         var lastId = reader.ReadInt();
 
         return new(type, header, lastId, reader.ReadItems());

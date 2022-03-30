@@ -106,7 +106,8 @@ public class ContextBuilder : IContextBuilder
         {
             using var reader = new OcsReader(await File.ReadAllBytesAsync(file.Path).ConfigureAwait(false));
 
-            if (reader.ReadInt() != (int)DataFileType.Mod)
+            var dataFileType = reader.ReadInt();
+            if (dataFileType < (int)DataFileType.Mod)
             {
                 if (options.ThrowIfMissing)
                 {
@@ -116,7 +117,7 @@ public class ContextBuilder : IContextBuilder
                 return;
             }
 
-            reader.ReadHeader();
+            reader.ReadHeader(dataFileType);
 
             lastId = Math.Max(lastId, reader.ReadInt());
 
