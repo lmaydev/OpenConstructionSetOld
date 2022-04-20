@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using OpenConstructionSet.Mods;
 
-namespace OpenConstructionSet.Installations;
+using IOPath = System.IO.Path;
 
-using IOPath = Path;
+namespace OpenConstructionSet.Installations;
 
 /// <inheritdoc/>
 public class ModFolder : IModFolder

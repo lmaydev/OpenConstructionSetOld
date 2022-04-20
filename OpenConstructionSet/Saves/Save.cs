@@ -1,12 +1,12 @@
-﻿namespace OpenConstructionSet.Saves;
+﻿using IOPath = System.IO.Path;
 
-using IOPath = System.IO.Path;
+namespace OpenConstructionSet.Saves;
 
 /// <inheritdoc/>
 public class Save : ISave
 {
     /// <summary>
-    /// Creats a new <see cref="Save"/> instance from the given path.
+    /// Creates a new <see cref="Save"/> instance from the given path.
     /// </summary>
     /// <param name="path">The path of the <see cref="Save"/>'s root folder.</param>
     public Save(string path)

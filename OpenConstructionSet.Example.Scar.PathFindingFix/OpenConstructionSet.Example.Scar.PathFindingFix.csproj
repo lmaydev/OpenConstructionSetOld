@@ -24,6 +24,10 @@
 	<ItemGroup>
 	  <PackageReference Include="System.Linq.Async" Version="6.0.1" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="OpenConstructionSet" />
+	</ItemGroup>
 	
 	<ItemGroup>
 	  <ProjectReference Include="..\OpenConstructionSet\OpenConstructionSet.csproj" />

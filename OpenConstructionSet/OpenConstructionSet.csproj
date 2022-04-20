@@ -45,6 +45,12 @@
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="LMay.Collections" />
+    <Using Include="OpenConstructionSet.Data" />
+    <Using Include="OpenConstructionSet.IO" />
+  </ItemGroup>
+
   <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
@@ -59,6 +65,6 @@
   <ItemGroup>
     <EditorConfigFiles Remove="..\.editorconfig" />
 
-    <None Include="$(SolutionDir)README.md" Pack="true" PackagePath="\"/>
+    <None Include="$(SolutionDir)README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
